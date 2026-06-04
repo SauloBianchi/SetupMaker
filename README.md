@@ -94,48 +94,87 @@ O **SetupMaker** resolve um problema real: a dificuldade de montar um PC compat�
 setupmaker/
 │
 ├── app/
-│   ├── models/              # Model — banco de dados (SQLAlchemy)
-│   │   ├── user.py          # Usuário com 2FA e verificação de e-mail
-│   │   ├── produto.py       # Produto e Categoria
-│   │   ├── build.py         # Build de PC
-│   │   ├── loja.py          # Loja e Preço
-│   │   └── avaliacao.py     # Avaliação e Favorito
+│   ├── __init__.py              # Factory Flask — registra blueprints e extensões
+│   ├── extensions.py            # Instâncias db, login_manager, jwt, mail, csrf
 │   │
-│   ├── routes/              # Controller — lógica de negócio
-│   │   ├── auth.py          # Registro, login, 2FA, senha
-│   │   ├── builds.py        # CRUD de builds + compatibilidade
-│   │   ├── produtos.py      # Listagem e detalhe de peças
-│   │   ├── avaliacoes.py    # Sistema de avaliações
-│   │   ├── admin.py         # Painel administrativo
-│   │   └── main.py          # Página inicial e comparador
+│   ├── models/                  # Model — banco de dados (SQLAlchemy)
+│   │   ├── __init__.py
+│   │   ├── user.py              # Usuário com 2FA e verificação de e-mail
+│   │   ├── produto.py           # Produto e Categoria
+│   │   ├── build.py             # Build de PC com peças e lojas por componente
+│   │   ├── loja.py              # Loja e Preço (seed/usuario)
+│   │   └── avaliacao.py         # Avaliacao, AvaliacaoBuild e Favorito
 │   │
-│   ├── templates/           # View — interface (Jinja2 + Bootstrap 5)
-│   │   ├── base.html        # Layout base com sidebar dinâmica
-│   │   ├── auth/            # Login, cadastro, 2FA, configurações
-│   │   ├── builds/          # Montador, listagem, detalhe
-│   │   ├── produtos/        # Listagem e detalhe de peças
-│   │   ├── avaliacoes/      # Avaliações e ranking
-│   │   ├── admin/           # Painel administrativo
-│   │   └── main/            # Início e comparador
+│   ├── routes/                  # Controller — lógica de negócio
+│   │   ├── __init__.py
+│   │   ├── auth.py              # Registro, login, 2FA, alterar senha, configurações
+│   │   ├── builds.py            # CRUD de builds, montador, compatibilidade, builds públicas
+│   │   ├── produtos.py          # Listagem, detalhe, salvar preço, API de busca
+│   │   ├── avaliacoes.py        # Sistema de avaliações e ranking
+│   │   ├── admin.py             # Painel administrativo (produtos, usuários, builds)
+│   │   └── main.py              # Página inicial e comparador de preços
 │   │
-│   ├── api/
-│   │   └── routes.py        # API REST protegida por JWT
+│   ├── api/                     # API REST protegida por JWT
+│   │   ├── __init__.py
+│   │   └── routes.py            # 12 endpoints: auth, produtos, builds, avaliações
 │   │
-│   ├── services/            # Serviços de negócio
-│   │   ├── compatibilidade.py  # Verificação de compatibilidade
-│   │   ├── fps_estimator.py    # Estimativa de FPS em jogos
-│   │   └── seed.py             # Dados iniciais (80 peças)
+│   ├── services/                # Serviços de negócio
+│   │   ├── __init__.py
+│   │   ├── compatibilidade.py   # Verificação socket, RAM e wattage
+│   │   ├── fps_estimator.py     # Estimativa de FPS e consumo energético
+│   │   └── seed.py              # Dados iniciais (~80 peças + lojas)
 │   │
 │   ├── utils/
-│   │   └── lojas_urls.py    # URLs de busca por loja
+│   │   └── lojas_urls.py        # Config visual e URLs de busca por loja
 │   │
-│   └── extensions.py        # Extensões Flask centralizadas
+│   ├── templates/               # View — interface (Jinja2 + Bootstrap 5)
+│   │   ├── base.html            # Layout base: sidebar, topbar, flash messages
+│   │   ├── auth/
+│   │   │   ├── login.html
+│   │   │   ├── login_codigo.html    # Validação do código 2FA
+│   │   │   ├── register.html
+│   │   │   ├── verificar_email.html
+│   │   │   ├── alterar_senha.html
+│   │   │   └── configuracoes.html
+│   │   ├── builds/
+│   │   │   ├── montador.html        # Seletor de componentes com ícones e loja por peça
+│   │   │   ├── listar.html          # Minhas builds
+│   │   │   ├── detalhe.html         # Build com FPS, consumo, avaliações, onde comprar
+│   │   │   └── publicas.html        # Builds públicas da comunidade
+│   │   ├── produtos/
+│   │   │   ├── listar.html          # Catálogo com filtro por categoria
+│   │   │   └── detalhe.html         # Especificações, preços por loja, avaliações
+│   │   ├── avaliacoes/
+│   │   │   └── index.html           # Ranking de peças e builds (abas)
+│   │   ├── admin/
+│   │   │   ├── index.html
+│   │   │   ├── produtos.html
+│   │   │   ├── produto_form.html
+│   │   │   ├── builds.html
+│   │   │   ├── build_form.html
+│   │   │   └── usuarios.html
+│   │   ├── api/
+│   │   │   └── docs.html            # Documentação interativa da API com playground JWT
+│   │   └── main/
+│   │       ├── index.html           # Dashboard com destaques e estatísticas
+│   │       └── comparar.html        # Comparador de preços entre lojas
+│   │
+│   └── static/
+│       ├── css/
+│       ├── js/
+│       └── img/
+│           ├── logo.png
+│           └── logo_mini.png
 │
-├── migrations/              # Migrações do banco de dados
-├── config.py                # Configurações por ambiente
-├── run.py                   # Ponto de entrada da aplicação
-├── requirements.txt         # Dependências do projeto
-└── .env                     # Variáveis de ambiente (não commitar!)
+├── migrations/                  # Migrações do banco (Alembic / Flask-Migrate)
+│
+├── instance/                    # Gerado automaticamente (não commitar)
+│   └── buildcompare.db          # Banco SQLite local
+│
+├── config.py                    # DevelopmentConfig / ProductionConfig
+├── run.py                       # Ponto de entrada: flask run
+├── requirements.txt             # Dependências do projeto
+└── .env                         # Variáveis sensíveis 
 ```
 
 ---
