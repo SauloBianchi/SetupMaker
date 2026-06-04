@@ -248,32 +248,3 @@ Authorization: Bearer eyJ...
 | `GET`  | `/api/avaliacoes/produtos` | ✅ | Avaliações de produtos |
 | `GET`  | `/api/avaliacoes/builds` | ✅ | Avaliações de builds |
 | `POST` | `/api/compatibilidade` | ✅ | Verifica compatibilidade de peças |
-
----
-
-## 🎬 Fluxos Demonstrados no Vídeo
-
-1. **Registro** → cadastro com verificação de e-mail via código 6 dígitos
-2. **Login** → autenticação com código 2FA por e-mail
-3. **Área protegida** → montador de PC, peças, comparador de preços
-4. **Alterar senha** → validação de senha forte (mín. 8 chars, 1 maiúscula, 1 número)
-5. **Logout** → encerramento seguro da sessão
-6. **Mensagens** → feedback visual de erro e sucesso em todas as ações
-
----
-
-## 📊 Critérios de Avaliação
-
-| Critério | Implementação |
-|----------|---------------|
-| **Funcionamento (20pts)** | Sistema completo e funcional com todas as rotas operacionais |
-| **Autenticação JWT (20pts)** | Flask-JWT-Extended com 2FA por e-mail e verificação de cadastro |
-| **Segurança (20pts)** | CSRF (Flask-WTF), XSS (Jinja2), SQL Injection (SQLAlchemy), hash de senha |
-| **Organização MVC (20pts)** | Models, Routes (controllers) e Templates (views) separados e organizados |
-| **Documentação (20pts)** | README completo, código comentado e API documentada em `/api/docs` |
-
----
-
-## 👥 Desenvolvimento
-
-Projeto desenvolvido como trabalho acadêmico para a disciplina de Desenvolvimento Web Seguro.
