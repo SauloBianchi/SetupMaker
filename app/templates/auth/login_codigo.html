@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Verificação — SetupMaker{% endblock %}
+
+{% block full_page %}
+<div class="auth-page">
+    <div class="auth-container">
+
+        <div class="auth-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}"
+                 alt="SetupMaker"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                 style="height:100px;width:auto;object-fit:contain;">
+            <div style="display:none;align-items:center;gap:10px;">
+                <div style="width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+                            border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-cpu-fill" style="color:#fff;font-size:20px;"></i>
+                </div>
+                <div>
+                    <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;">SetupMaker</div>
+                    <div style="font-size:11px;color:#64748b;">Monte, compare e economize.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-card" style="text-align:center;">
+            <div style="width:56px;height:56px;background:rgba(59,130,246,0.1);
+                        border:2px solid rgba(59,130,246,0.3);border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;
+                        margin:0 auto 20px;font-size:24px;">🔐</div>
+
+            <div class="auth-title">Verificação em duas etapas</div>
+            <div class="auth-subtitle">
+                Digite o código de 6 dígitos enviado para seu e-mail
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash-msg flash-{{ category }}" style="margin-bottom:16px;text-align:left;">
+                        {% if category == 'success' %}<i class="bi bi-check-circle-fill"></i>
+                        {% elif category == 'danger' %}<i class="bi bi-x-circle-fill"></i>
+                        {% else %}<i class="bi bi-info-circle-fill"></i>{% endif %}
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('auth.login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="verificar_codigo" value="1">
+                <div class="form-group">
+                    <input type="text" name="codigo" class="sm-input"
+                           maxlength="6" placeholder="000000"
+                           required autofocus
+                           style="text-align:center;font-size:28px;font-weight:700;
+                                  letter-spacing:12px;padding:14px;">
+                </div>
+                <button type="submit" class="sm-btn sm-btn-primary w-100">
+                    <i class="bi bi-shield-check"></i> Verificar código
+                </button>
+            </form>
+
+            <div class="auth-footer" style="margin-top:16px;">
+                <a href="{{ url_for('auth.login') }}">
+                    <i class="bi bi-arrow-left"></i> Voltar ao login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

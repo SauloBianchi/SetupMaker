@@ -1,0 +1,530 @@
+{% extends 'base.html' %}
+{% block title %}Montar PC — SetupMaker{% endblock %}
+
+{% block extra_css %}
+<style>
+  .slot-card {
+    background:#131d35;border:1px dashed #2d3f5e;border-radius:12px;
+    padding:14px;cursor:pointer;transition:all 0.15s;
+  }
+  .slot-card.filled { border-style:solid;border-color:#3b82f6;background:rgba(59,130,246,0.05); }
+  .slot-card:hover  { border-color:#3b82f6;background:rgba(59,130,246,0.05); }
+
+  .compat-badge {
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;
+  }
+
+  .modal-overlay {
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    z-index:1000;align-items:center;justify-content:center;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal-box {
+    background:#131d35;border:1px solid #1e2d4a;border-radius:16px;
+    width:90%;max-width:560px;max-height:80vh;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .modal-header {
+    padding:16px 20px;border-bottom:1px solid #1e2d4a;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .modal-body { padding:16px 20px;overflow-y:auto;flex:1; }
+  .peca-option {
+    padding:12px;border:1px solid #1e2d4a;border-radius:8px;
+    cursor:pointer;transition:all 0.15s;margin-bottom:8px;
+  }
+  .peca-option:hover { border-color:#3b82f6;background:rgba(59,130,246,0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <div>
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">
+      <i class="bi bi-cpu-fill" style="color:#3b82f6;"></i> Montar PC
+    </h2>
+    <p style="font-size:13px;color:#64748b;">Selecione os componentes e verifique a compatibilidade</p>
+  </div>
+  <!-- Badge de compatibilidade em tempo real -->
+  <div id="compat-badge" class="compat-badge" style="background:rgba(100,116,139,0.1);
+       color:#64748b;border:1px solid rgba(100,116,139,0.2);">
+    <span id="compat-icon"><i class="bi bi-cpu-fill"></i></span>
+    <span id="compat-label">Aguardando peças</span>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;">
+
+  <!-- FORM PRINCIPAL -->
+  <form method="POST" action="{{ url_for('builds.nova') }}" id="build-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Nome da build -->
+    <div class="sm-card" style="margin-bottom:16px;">
+      <label class="sm-label">Nome da build</label>
+      <input type="text" name="nome" required placeholder="Ex: PC Gamer Custo-Benefício 2024"
+             class="sm-input" style="margin-bottom:10px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" name="publica" style="width:16px;height:16px;accent-color:#3b82f6;">
+        <span style="font-size:13px;color:#94a3b8;">Tornar esta build pública</span>
+      </label>
+    </div>
+
+    <!-- Slots de peças -->
+    {% set slots = [
+      ('cpu_id',        'cpu',         'Processador',   'https://cdn-icons-png.flaticon.com/512/2286/2286796.png'),
+      ('motherboard_id','motherboard', 'Placa-Mãe',     'https://cdn-icons-png.flaticon.com/512/2286/2286787.png'),
+      ('ram_id',        'ram',         'Memória RAM',   'https://cdn-icons-png.flaticon.com/512/3716/3716952.png'),
+      ('gpu_id',        'gpu',         'Placa de Vídeo','https://cdn-icons-png.flaticon.com/512/2000/2000522.png'),
+      ('storage_id',    'storage',     'Armazenamento', 'https://cdn-icons-png.flaticon.com/512/2139/2139855.png'),
+      ('fonte_id',      'psu',         'Fonte',         'https://cdn-icons-png.flaticon.com/512/2821/2821338.png'),
+      ('gabinete_id',   'case',        'Gabinete',      'https://cdn-icons-png.flaticon.com/512/18632/18632102.png'),
+      ('cooler_id',     'cooler',      'Cooler',        'https://cdn-icons-png.flaticon.com/512/2729/2729134.png'),
+    ] %}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      {% for field, slug, label, icon_url in slots %}
+      <input type="hidden" name="{{ field }}" id="{{ field }}" value="">
+
+      <div class="slot-card" id="slot_{{ field }}"
+           onclick="abrirModal('{{ field }}','{{ slug }}','{{ label }}')">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+            <img src="{{ icon_url }}" alt="{{ label }}"
+                 style="width:32px;height:32px;object-fit:contain;filter:invert(1) opacity(0.75);">
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;
+                        letter-spacing:1px;">{{ label }}</div>
+            <div id="slot_nome_{{ field }}"
+                 style="font-size:13px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              Clique para selecionar
+            </div>
+          </div>
+          <i class="bi bi-plus-circle" style="color:#3b82f6;font-size:18px;"
+             id="slot_icon_{{ field }}"></i>
+        </div>
+
+        <!-- Botão de loja + dropdown (aparece após selecionar peça) -->
+        {% if field == 'ram_id' %}
+        <div id="ram_qtd_row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #1e2d4a;" onclick="event.stopPropagation()">
+          <input type="hidden" name="ram_quantidade" id="ram_quantidade" value="2">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;color:#64748b;flex:1;">Quantidade de pentes:</span>
+            <div style="display:flex;gap:4px;">
+              <button type="button" onclick="setRamQtd(1)" id="ram_qtd_btn_1"
+                      style="padding:3px 10px;border-radius:5px;border:1px solid #1e2d4a;background:transparent;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;">1x</button>
+              <button type="button" onclick="setRamQtd(2)" id="ram_qtd_btn_2"
+                      style="padding:3px 10px;border-radius:5px;border:1px solid #3b82f6;background:rgba(59,130,246,0.15);color:#3b82f6;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;">2x</button>
+              <button type="button" onclick="setRamQtd(4)" id="ram_qtd_btn_4"
+                      style="padding:3px 10px;border-radius:5px;border:1px solid #1e2d4a;background:transparent;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;">4x</button>
+            </div>
+          </div>
+          <div id="ram_qtd_info" style="font-size:10px;color:#64748b;text-align:right;margin-top:3px;"></div>
+        </div>
+        {% endif %}
+
+        <div id="loja_row_{{ field }}" style="display:none;margin-top:8px;" onclick="event.stopPropagation()">
+          <input type="hidden" name="{{ field|replace('_id','_loja') }}" id="{{ field|replace('_id','_loja') }}" value="">
+          <div style="position:relative;">
+            <button type="button" id="loja_btn_{{ field }}"
+                    onclick="toggleLojaDropdown('{{ field }}')"
+                    style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                           padding:6px 10px;border-radius:6px;border:1px dashed #2d3f5e;
+                           background:rgba(59,130,246,0.04);color:#64748b;cursor:pointer;
+                           font-size:11px;transition:all 0.15s;"
+                    onmouseover="this.style.borderColor='#3b82f6';this.style.color='#94a3b8'"
+                    onmouseout="this.style.borderColor='#2d3f5e';this.style.color='#64748b'">
+              <span id="loja_label_{{ field }}">
+                <i class="bi bi-cart3"></i> Escolher loja para comprar
+              </span>
+              <i class="bi bi-chevron-down" style="font-size:10px;"></i>
+            </button>
+
+            <!-- Dropdown de lojas -->
+            <div id="loja_dropdown_{{ field }}"
+                 style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;
+                        background:#131d35;border:1px solid #1e2d4a;border-radius:8px;
+                        z-index:100;overflow:hidden;box-shadow:0 -8px 24px rgba(0,0,0,0.4);">
+              <div id="loja_opcoes_{{ field }}">
+                <div style="padding:10px;text-align:center;font-size:11px;color:#64748b;">Carregando...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Erros de compatibilidade inline -->
+    <div id="compat-erros" style="display:none;" class="sm-card" style="margin-bottom:16px;"></div>
+
+    <button type="submit" class="sm-btn sm-btn-primary" style="width:100%;justify-content:center;padding:14px;">
+      <i class="bi bi-floppy-fill"></i> Salvar Build
+    </button>
+  </form>
+
+  <!-- PAINEL LATERAL: resumo em tempo real -->
+  <div style="position:sticky;top:84px;">
+
+    <!-- Resumo de custos -->
+    <div class="sm-card" style="margin-bottom:16px;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+                 color:#e2e8f0;margin-bottom:14px;"><i class="bi bi-cash-coin" style="color:#10b981;"></i> Custo Estimado</h4>
+      <div id="custo-itens" style="font-size:13px;color:#64748b;margin-bottom:12px;">
+        Selecione peças para ver o custo.
+      </div>
+      <div style="border-top:1px solid #1e2d4a;padding-top:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;font-weight:600;color:#e2e8f0;">Total</span>
+          <span id="total-preco" style="font-family:'Rajdhani',sans-serif;font-size:22px;
+                                        font-weight:700;color:#10b981;">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Consumo energético -->
+    <div class="sm-card" style="margin-bottom:16px;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+                 color:#e2e8f0;margin-bottom:14px;"><i class="bi bi-lightning-charge-fill" style="color:#f59e0b;"></i> Consumo Energético</h4>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;color:#64748b;">Estimado</span>
+        <span id="consumo-watts" style="font-size:20px;font-weight:700;color:#f59e0b;">0W</span>
+      </div>
+    </div>
+
+    <!-- FPS estimado (após verificação) -->
+    <div class="sm-card" id="fps-card" style="display:none;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+                 color:#e2e8f0;margin-bottom:14px;"><i class="bi bi-controller" style="color:#a78bfa;"></i> FPS Estimado (1080p)</h4>
+      <div id="fps-lista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL de seleção de peças -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+                 color:#e2e8f0;" id="modal-title">Selecionar peça</h3>
+      <button onclick="fecharModal()"
+              style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="position:relative;margin-bottom:12px;">
+        <i class="bi bi-search" style="position:absolute;left:12px;top:50%;
+           transform:translateY(-50%);color:#64748b;"></i>
+        <input type="text" id="modal-busca" placeholder="Buscar..."
+               class="sm-input" style="padding-left:36px;"
+               oninput="buscarPecas()">
+      </div>
+      <div id="modal-lista">
+        <div style="text-align:center;padding:24px;color:#64748b;">Carregando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let modalSlot = '';
+let modalSlug = '';
+let pecasSelecionadas = {};
+
+function abrirModal(field, slug, label) {
+  modalSlot = field;
+  modalSlug = slug;
+  document.getElementById('modal-title').textContent = 'Selecionar: ' + label;
+  document.getElementById('modal-busca').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  buscarPecas();
+}
+
+function fecharModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+async function buscarPecas() {
+  const q = document.getElementById('modal-busca').value;
+  const url = `/pecas/api/buscar?categoria=${modalSlug}&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url);
+  const pecas = await res.json();
+
+  const lista = document.getElementById('modal-lista');
+  if (!pecas.length) {
+    lista.innerHTML = '<div style="text-align:center;padding:24px;color:#64748b;">Nenhuma peça encontrada.</div>';
+    return;
+  }
+
+  lista.innerHTML = pecas.map(p => `
+    <div class="peca-option" onclick="selecionarPeca(${p.id},'${p.nome}',${p.preco||0},${p.consumo||0})">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#e2e8f0;">${p.nome}</div>
+          <div style="font-size:11px;color:#64748b;">${p.marca}</div>
+          ${p.socket ? `<span style="font-size:10px;color:#3b82f6;background:rgba(59,130,246,0.1);padding:1px 6px;border-radius:3px;">${p.socket}</span>` : ''}
+          ${p.tipo_ram ? `<span style="font-size:10px;color:#8b5cf6;background:rgba(139,92,246,0.1);padding:1px 6px;border-radius:3px;margin-left:4px;">${p.tipo_ram}</span>` : ''}
+        </div>
+        <div style="text-align:right;">
+          ${p.preco ? `<div style="font-size:15px;font-weight:700;color:#10b981;">R$ ${p.preco.toFixed(2).replace('.',',')}</div>` : ''}
+          ${p.consumo ? `<div style="font-size:11px;color:#f59e0b;"><i class="bi bi-lightning-charge-fill" style="color:#f59e0b;"></i> ${p.consumo}W</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selecionarPeca(id, nome, preco, consumo) {
+  document.getElementById(modalSlot).value = id;
+  document.getElementById('slot_nome_' + modalSlot).textContent = nome;
+  document.getElementById('slot_nome_' + modalSlot).style.color = '#e2e8f0';
+  document.getElementById('slot_' + modalSlot).classList.add('filled');
+  document.getElementById('slot_icon_' + modalSlot).className = 'bi bi-check-circle-fill';
+  document.getElementById('slot_icon_' + modalSlot).style.color = '#10b981';
+
+  pecasSelecionadas[modalSlot] = { id, nome, preco, consumo };
+
+  // Mostra botão de loja e pré-carrega as opções
+  const lojaRow = document.getElementById('loja_row_' + modalSlot);
+  lojaRow.style.display = 'block';
+
+  // Se for RAM, mostra seletor de quantidade
+  if (modalSlot === 'ram_id') {
+    document.getElementById('ram_qtd_row').style.display = 'block';
+    atualizarInfoRam();
+  }
+
+  // Reseta loja anterior
+  document.getElementById(modalSlot.replace('_id','_loja')).value = '';
+  document.getElementById('loja_label_' + modalSlot).innerHTML = '<i class="bi bi-cart3"></i> Escolher loja para comprar';
+
+  carregarOpcoesLoja(modalSlot, id);
+  fecharModal();
+  atualizarPainel();
+  verificarCompatibilidade();
+}
+
+// Guarda lojas carregadas por slot para não rebuscar
+const lojasCache = {};
+
+async function carregarOpcoesLoja(field, produtoId) {
+  if (lojasCache[field]?.produtoId === produtoId) return;
+  try {
+    const res  = await fetch(`/pecas/${produtoId}/lojas`);
+    const data = await res.json();
+    lojasCache[field] = { produtoId, lojas: data.lojas };
+  } catch(e) {
+    lojasCache[field] = { produtoId, lojas: [] };
+  }
+}
+
+function toggleLojaDropdown(field) {
+  const dropdown = document.getElementById('loja_dropdown_' + field);
+  const isOpen   = dropdown.style.display === 'block';
+
+  // Fecha todos os outros dropdowns abertos
+  document.querySelectorAll('[id^="loja_dropdown_"]').forEach(d => d.style.display = 'none');
+
+  if (!isOpen) {
+    dropdown.style.display = 'block';
+    renderOpcoes(field);
+  }
+}
+
+function renderOpcoes(field) {
+  const container = document.getElementById('loja_opcoes_' + field);
+  const cache     = lojasCache[field];
+
+  if (!cache || !cache.lojas.length) {
+    container.innerHTML = '<div style="padding:10px;text-align:center;font-size:11px;color:#64748b;">Nenhuma loja disponível.</div>';
+    return;
+  }
+
+  container.innerHTML = cache.lojas.map(l => {
+    const temPreco = l.preco !== null;
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:8px 12px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid #1e2d4a;"
+           onmouseover="this.style.background='rgba(59,130,246,0.08)'"
+           onmouseout="this.style.background='transparent'"
+           onclick="selecionarLoja('${field}','${l.nome}','${l.icon}',${temPreco ? l.preco : 'null'},'${l.url}')">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <i class="${l.icon}" style="font-size:14px;color:#94a3b8;"></i>
+          <span style="font-size:12px;font-weight:500;color:#e2e8f0;">${l.nome}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${temPreco
+            ? `<span style="font-size:12px;font-weight:700;color:#10b981;">R$ ${l.preco.toFixed(2).replace('.',',')}</span>`
+            : `<span style="font-size:10px;color:#475569;">Ver preço</span>`
+          }
+          <a href="${l.url}" target="_blank" rel="noopener"
+             onclick="event.stopPropagation()"
+             style="font-size:10px;color:#3b82f6;padding:2px 4px;border-radius:3px;
+                    border:1px solid rgba(59,130,246,0.3);">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </a>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selecionarLoja(field, nome, icon, preco, url) {
+  const lojaField = field.replace('_id', '_loja');
+  document.getElementById(lojaField).value = nome;
+
+  const label = document.getElementById('loja_label_' + field);
+  label.innerHTML = `<i class="${icon}" style="font-size:13px;"></i> <strong style="color:#e2e8f0;">${nome}</strong>`
+    + (preco !== null ? ` <span style="color:#10b981;font-weight:700;margin-left:4px;">R$ ${preco.toFixed(2).replace('.',',')}</span>` : '');
+
+  // Atualiza estilo do botão para indicar seleção
+  const btn = document.getElementById('loja_btn_' + field);
+  btn.style.borderStyle = 'solid';
+  btn.style.borderColor = '#10b981';
+  btn.style.background  = 'rgba(16,185,129,0.06)';
+
+  // Fecha dropdown
+  document.getElementById('loja_dropdown_' + field).style.display = 'none';
+
+  // Atualiza painel com o preço da loja escolhida
+  if (pecasSelecionadas[field] && preco !== null) {
+    pecasSelecionadas[field].preco = preco;
+    pecasSelecionadas[field].loja  = nome;
+    atualizarPainel();
+  }
+}
+
+function setRamQtd(qtd) {
+  document.getElementById('ram_quantidade').value = qtd;
+  [1, 2, 4].forEach(q => {
+    const btn = document.getElementById('ram_qtd_btn_' + q);
+    if (q === qtd) {
+      btn.style.borderColor = '#3b82f6';
+      btn.style.background  = 'rgba(59,130,246,0.15)';
+      btn.style.color       = '#3b82f6';
+    } else {
+      btn.style.borderColor = '#1e2d4a';
+      btn.style.background  = 'transparent';
+      btn.style.color       = '#64748b';
+    }
+  });
+  atualizarInfoRam();
+  // Recalcula painel com nova quantidade
+  if (pecasSelecionadas['ram_id']) {
+    const preco1x = pecasSelecionadas['ram_id']._preco1x || pecasSelecionadas['ram_id'].preco;
+    pecasSelecionadas['ram_id']._preco1x = preco1x;
+    pecasSelecionadas['ram_id'].preco     = preco1x * qtd;
+    const consumo1x = pecasSelecionadas['ram_id']._consumo1x || pecasSelecionadas['ram_id'].consumo;
+    pecasSelecionadas['ram_id']._consumo1x = consumo1x;
+    pecasSelecionadas['ram_id'].consumo     = consumo1x * qtd;
+    atualizarPainel();
+  }
+}
+
+function atualizarInfoRam() {
+  const qtd  = parseInt(document.getElementById('ram_quantidade').value) || 2;
+  const peca = pecasSelecionadas['ram_id'];
+  const info = document.getElementById('ram_qtd_info');
+  if (!info) return;
+  if (peca && peca._preco1x) {
+    const total = (peca._preco1x * qtd).toFixed(2).replace('.', ',');
+    info.textContent = `${qtd} × R$ ${peca._preco1x.toFixed(2).replace('.', ',')} = R$ ${total}`;
+  } else if (peca && peca.preco) {
+    info.textContent = `${qtd}x pente(s)`;
+  }
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('[id^="loja_row_"]')) {
+    document.querySelectorAll('[id^="loja_dropdown_"]').forEach(d => d.style.display = 'none');
+  }
+});
+
+function atualizarPainel() {
+  let total = 0;
+  let consumoTotal = 0;
+  let html = '';
+  const nomes = { cpu_id:'CPU', gpu_id:'GPU', ram_id:'RAM', motherboard_id:'Placa-Mãe',
+                  storage_id:'SSD', fonte_id:'Fonte', gabinete_id:'Gabinete', cooler_id:'Cooler' };
+
+  for (const [k, v] of Object.entries(pecasSelecionadas)) {
+    total += v.preco || 0;
+    consumoTotal += v.consumo || 0;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1e2d4a;">
+      <div>
+        <span style="color:#94a3b8;font-size:12px;">${nomes[k]||k}</span>
+        ${v.loja ? `<div style="font-size:10px;color:#64748b;">${v.loja}</div>` : ''}
+      </div>
+      <span style="color:#e2e8f0;font-size:12px;font-weight:500;">${v.preco ? 'R$ '+v.preco.toFixed(2).replace('.',',') : '—'}</span>
+    </div>`;
+  }
+
+  if (!html) html = '<div style="color:#64748b;font-size:13px;">Selecione peças para ver o custo.</div>';
+
+  document.getElementById('custo-itens').innerHTML = html;
+  document.getElementById('total-preco').textContent = 'R$ ' + total.toFixed(2).replace('.',',');
+  document.getElementById('consumo-watts').textContent = consumoTotal + 'W';
+}
+
+async function verificarCompatibilidade() {
+  const ids = {};
+  ['cpu_id','gpu_id','ram_id','motherboard_id','storage_id','fonte_id','gabinete_id'].forEach(f => {
+    const v = document.getElementById(f).value;
+    if (v) ids[f] = v;
+  });
+
+  if (Object.keys(ids).length < 2) return;
+
+  const res = await fetch('/builds/api/compatibilidade', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json',
+               'X-CSRFToken': document.querySelector('[name=csrf_token]').value },
+    body: JSON.stringify(ids)
+  });
+  const data = await res.json();
+
+  // Badge
+  const badge = document.getElementById('compat-badge');
+  badge.style.background = data.compativel ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+  badge.style.color = data.cor;
+  badge.style.borderColor = data.compativel ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+  document.getElementById('compat-icon').textContent = data.icon;
+  document.getElementById('compat-label').textContent = data.label;
+
+  // Erros
+  const errosDiv = document.getElementById('compat-erros');
+  if (data.erros && data.erros.length) {
+    errosDiv.style.display = 'block';
+    errosDiv.innerHTML = data.erros.map(e =>
+      `<div style="color:#ef4444;font-size:13px;padding:6px 0;border-bottom:1px solid #2d1b1b;">${e}</div>`
+    ).join('');
+  } else {
+    errosDiv.style.display = 'none';
+  }
+
+  // FPS
+  if (data.fps && data.fps.length) {
+    document.getElementById('fps-card').style.display = 'block';
+    document.getElementById('fps-lista').innerHTML = data.fps.map(f => `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  padding:8px 0;border-bottom:1px solid #1e2d4a;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:16px;">${f.icon}</span>
+          <span style="font-size:13px;color:#e2e8f0;">${f.jogo}</span>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:16px;font-weight:700;color:${f.cor};">${f.fps} FPS</span>
+          <div style="font-size:10px;color:${f.cor};">${f.rating}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// Fecha modal clicando fora
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+</script>
+{% endblock %}

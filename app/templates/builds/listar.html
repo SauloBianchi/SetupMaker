@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Minhas Builds — SetupMaker{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <div>
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">
+      <i class="bi bi-bookmark-fill" style="color:#3b82f6;"></i> Minhas Builds
+    </h2>
+    <p style="font-size:13px;color:#64748b;">{{ builds|length }} build(s) salva(s)</p>
+  </div>
+  <a href="{{ url_for('builds.nova') }}" class="sm-btn sm-btn-primary">
+    <i class="bi bi-plus-lg"></i> Nova Build
+  </a>
+</div>
+
+{% if not builds %}
+<div style="text-align:center;padding:80px 24px;background:#131d35;border:1px solid #1e2d4a;border-radius:16px;">
+  <div style="font-size:56px;margin-bottom:16px;"><i class="bi bi-pc-display-horizontal" style="color:#3b82f6;"></i>️</div>
+  <h3 style="font-family:'Rajdhani',sans-serif;font-size:20px;color:#e2e8f0;margin-bottom:8px;">
+    Nenhuma build ainda
+  </h3>
+  <p style="color:#64748b;font-size:14px;margin-bottom:20px;">
+    Crie sua primeira configuração de PC agora mesmo!
+  </p>
+  <a href="{{ url_for('builds.nova') }}" class="sm-btn sm-btn-primary">
+    <i class="bi bi-cpu-fill"></i> Montar PC
+  </a>
+</div>
+
+{% else %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+  {% for b in builds %}
+  <div style="background:#131d35;border:1px solid #1e2d4a;border-radius:12px;
+              overflow:hidden;transition:border-color 0.15s;"
+       onmouseover="this.style.borderColor='#3b82f6'"
+       onmouseout="this.style.borderColor='#1e2d4a'">
+
+    <div style="background:linear-gradient(135deg,#1e3a5f,#0f172a);
+                height:90px;display:flex;align-items:center;justify-content:center;
+                font-size:40px;border-bottom:1px solid #1e2d4a;"><i class="bi bi-pc-display-horizontal" style="color:#3b82f6;"></i>️</div>
+
+    <div style="padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <h3 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:3px;">{{ b.nome }}</h3>
+          <div style="font-size:11px;color:#64748b;">{{ b.criado_em.strftime('%d/%m/%Y') }}</div>
+        </div>
+        {% if b.publica %}
+        <span style="font-size:10px;background:rgba(16,185,129,0.1);color:#10b981;
+                     border:1px solid rgba(16,185,129,0.2);padding:2px 8px;border-radius:4px;">
+          Pública
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Peças resumidas -->
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">
+        {% for peca, label in [(b.cpu,'CPU'),(b.gpu,'GPU'),(b.ram,'RAM'),(b.motherboard,'MB')] %}
+        <span style="font-size:10px;background:{% if peca %}rgba(59,130,246,0.1){% else %}rgba(100,116,139,0.1){% endif %};
+                     color:{% if peca %}#3b82f6{% else %}#475569{% endif %};
+                     padding:2px 7px;border-radius:4px;border:1px solid {% if peca %}rgba(59,130,246,0.2){% else %}rgba(100,116,139,0.2){% endif %};">
+          {{ label }}{% if not peca %} —{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;color:#64748b;">Total estimado</div>
+          <div style="font-size:17px;font-weight:700;color:#10b981;">
+            R$ {{ "%.2f"|format(b.preco_total()) }}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:#64748b;">Consumo</div>
+          <div style="font-size:13px;font-weight:600;color:#f59e0b;"><i class="bi bi-lightning-charge-fill" style="color:#f59e0b;font-size:10px;"></i> {{ b.consumo_total() }}W</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <a href="{{ url_for('builds.detalhe', build_id=b.id) }}"
+           class="sm-btn sm-btn-primary" style="flex:1;justify-content:center;padding:8px;">
+          Ver detalhes
+        </a>
+        <form action="{{ url_for('builds.deletar', build_id=b.id) }}" method="POST"
+              onsubmit="return confirm('Deletar esta build?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="sm-btn sm-btn-outline"
+                  style="padding:8px 12px;color:#ef4444;border-color:rgba(239,68,68,0.3);">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% block title %}API Docs — SetupMaker{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+
+  <!-- Cabeçalho -->
+  <div style="margin-bottom:28px;">
+    <h1 style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:#e2e8f0;margin-bottom:6px;">
+      <i class="bi bi-code-slash" style="color:#3b82f6;"></i> API REST — SetupMaker
+    </h1>
+    <p style="color:#64748b;font-size:13px;">
+      Todos os endpoints exigem autenticação via <strong style="color:#a78bfa;">JWT Bearer Token</strong>.
+      Obtenha seu token em <code style="color:#10b981;">/api/auth/login</code> e envie no header:
+      <code style="color:#f59e0b;">Authorization: Bearer &lt;token&gt;</code>
+    </p>
+  </div>
+
+  <!-- Playground de Login -->
+  <div style="background:#131d35;border:1px solid #3b82f6;border-radius:12px;padding:20px;margin-bottom:28px;">
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#3b82f6;margin-bottom:4px;">
+      <i class="bi bi-key-fill"></i> 1. Obter Token JWT
+    </h2>
+    <p style="font-size:12px;color:#64748b;margin-bottom:16px;">
+      POST <code>/api/auth/login</code> — suas credenciais do SetupMaker
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">E-mail</label>
+        <input id="login-email" type="email" placeholder="{{ current_user.email }}"
+               value="{{ current_user.email }}"
+               style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid #1e2d4a;
+                      background:#0f172a;color:#e2e8f0;font-size:13px;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">Senha</label>
+        <input id="login-senha" type="password" placeholder="sua senha"
+               style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid #1e2d4a;
+                      background:#0f172a;color:#e2e8f0;font-size:13px;">
+      </div>
+    </div>
+
+    <button onclick="fazerLogin()"
+            style="padding:8px 20px;border-radius:7px;background:#3b82f6;border:none;
+                   color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+      <i class="bi bi-lightning-charge-fill"></i> Gerar Token
+    </button>
+
+    <div id="token-result" style="margin-top:12px;display:none;">
+      <div style="font-size:11px;color:#10b981;margin-bottom:6px;">
+        <i class="bi bi-check-circle-fill"></i> Token gerado! Copiado automaticamente e ativo nos exemplos abaixo.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <code id="token-display"
+              style="flex:1;font-size:11px;color:#a78bfa;background:#0f172a;padding:8px 12px;
+                     border-radius:6px;border:1px solid #1e2d4a;overflow:hidden;
+                     text-overflow:ellipsis;white-space:nowrap;display:block;"></code>
+        <button onclick="copiarToken()"
+                style="padding:6px 12px;border-radius:6px;border:1px solid #1e2d4a;
+                       background:transparent;color:#64748b;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="bi bi-clipboard"></i> Copiar
+        </button>
+      </div>
+    </div>
+    <div id="login-erro" style="margin-top:10px;font-size:12px;color:#ef4444;display:none;"></div>
+  </div>
+
+  <!-- Endpoints -->
+  {% set grupos = [
+    ('Autenticação', 'shield-lock-fill', '#a78bfa', [
+      ('GET',  '/api/auth/me',             'Dados do usuário autenticado',           '',                                           'auth_me'),
+      ('POST', '/api/auth/refresh',        'Renovar access_token com refresh_token', '{"Authorization": "Bearer <refresh_token>"}','auth_refresh'),
+    ]),
+    ('Produtos', 'cpu-fill', '#3b82f6', [
+      ('GET',  '/api/produtos',            'Listar produtos (filtros: ?categoria=cpu&q=ryzen&limit=10)', '', 'produtos_list'),
+      ('GET',  '/api/produtos/1',          'Detalhes de um produto',                 '',                  'produto_detail'),
+      ('GET',  '/api/produtos/1/precos',   'Comparar preços do produto entre lojas', '',                  'produto_precos'),
+    ]),
+    ('Builds', 'pc-display-horizontal', '#10b981', [
+      ('GET',  '/api/builds',              'Suas builds',                            '',                  'builds_list'),
+      ('GET',  '/api/builds/1',            'Detalhes de uma build',                  '',                  'build_detail'),
+      ('GET',  '/api/builds/publicas',     'Builds públicas (filtro: ?limit=10)',    '',                  'builds_pub'),
+      ('POST', '/api/compatibilidade',     'Verificar compatibilidade de uma build', '{"build_id": 1}',   'compat'),
+    ]),
+    ('Avaliações', 'star-fill', '#f59e0b', [
+      ('GET',  '/api/avaliacoes/produtos', 'Ranking de produtos mais bem avaliados', '',  'rank_prod'),
+      ('GET',  '/api/avaliacoes/builds',   'Ranking de builds mais bem avaliadas',   '',  'rank_build'),
+    ]),
+  ] %}
+
+  {% for grupo, icone, cor, endpoints in grupos %}
+  <div style="margin-bottom:24px;">
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+               color:{{ cor }};margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <i class="bi bi-{{ icone }}"></i> {{ grupo }}
+    </h2>
+
+    {% for metodo, path, descricao, body_hint, ep_id in endpoints %}
+    <div style="background:#131d35;border:1px solid #1e2d4a;border-radius:10px;
+                margin-bottom:10px;overflow:hidden;">
+
+      <!-- Header do endpoint -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+                  cursor:pointer;transition:background 0.15s;"
+           onclick="toggleEndpoint('{{ ep_id }}')"
+           onmouseover="this.style.background='rgba(59,130,246,0.04)'"
+           onmouseout="this.style.background='transparent'">
+        <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+                     {% if metodo == 'GET' %}background:rgba(16,185,129,0.15);color:#10b981;
+                     {% else %}background:rgba(245,158,11,0.15);color:#f59e0b;{% endif %}
+                     flex-shrink:0;">
+          {{ metodo }}
+        </span>
+        <code style="font-size:12px;color:#a78bfa;flex:1;">{{ path }}</code>
+        <span style="font-size:12px;color:#64748b;">{{ descricao }}</span>
+        <i class="bi bi-chevron-down" id="chevron-{{ ep_id }}"
+           style="font-size:11px;color:#475569;transition:transform 0.2s;flex-shrink:0;"></i>
+      </div>
+
+      <!-- Playground -->
+      <div id="ep-{{ ep_id }}" style="display:none;border-top:1px solid #0f172a;padding:16px;">
+
+        {% if body_hint and metodo == 'POST' %}
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">Body (JSON)</label>
+          <textarea id="body-{{ ep_id }}"
+                    style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid #1e2d4a;
+                           background:#0f172a;color:#e2e8f0;font-size:12px;font-family:monospace;
+                           min-height:60px;box-sizing:border-box;resize:vertical;">{{ body_hint }}</textarea>
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <button onclick="testarEndpoint('{{ metodo }}','{{ path }}','{{ ep_id }}')"
+                  style="padding:6px 16px;border-radius:6px;background:{{ cor }};border:none;
+                         color:#fff;font-size:12px;font-weight:600;cursor:pointer;opacity:0.9;"
+                  onmouseover="this.style.opacity='1'"
+                  onmouseout="this.style.opacity='0.9'">
+            <i class="bi bi-play-fill"></i> Executar
+          </button>
+          <span style="font-size:11px;color:#334155;">
+            Header: <code style="color:#64748b;">Authorization: Bearer &lt;token&gt;</code>
+          </span>
+        </div>
+
+        <!-- Resposta -->
+        <div id="resp-{{ ep_id }}" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;font-weight:600;color:#64748b;">Resposta</span>
+            <span id="status-{{ ep_id }}" style="font-size:11px;font-weight:700;"></span>
+          </div>
+          <pre id="json-{{ ep_id }}"
+               style="background:#0a0f1e;border:1px solid #1e2d4a;border-radius:6px;
+                      padding:12px;font-size:11px;color:#10b981;overflow-x:auto;
+                      max-height:300px;overflow-y:auto;margin:0;white-space:pre-wrap;"></pre>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <!-- Nota sobre segurança -->
+  <div style="background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.2);
+              border-radius:10px;padding:16px;margin-top:8px;">
+    <h4 style="font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:8px;">
+      <i class="bi bi-shield-check"></i> Segurança da API
+    </h4>
+    <ul style="font-size:12px;color:#64748b;padding-left:16px;display:flex;flex-direction:column;gap:5px;">
+      <li>Todos os endpoints (exceto <code>/api/auth/login</code>) exigem <strong style="color:#e2e8f0;">JWT Bearer Token</strong></li>
+      <li>Access tokens expiram em <strong style="color:#e2e8f0;">1 hora</strong> — use o refresh token para renovar</li>
+      <li>Recursos privados (builds não públicas) retornam <code style="color:#ef4444;">403 Forbidden</code> para outros usuários</li>
+      <li>Senhas nunca são expostas em nenhum endpoint — armazenadas com <strong style="color:#e2e8f0;">bcrypt hash</strong></li>
+      <li>Queries usam <strong style="color:#e2e8f0;">SQLAlchemy parametrizado</strong> — protegido contra SQL Injection</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+  let jwtToken = '';
+  let refreshToken = '';
+
+  async function fazerLogin() {
+    const email = document.getElementById('login-email').value;
+    const senha = document.getElementById('login-senha').value;
+    const erro  = document.getElementById('login-erro');
+    const result = document.getElementById('token-result');
+    erro.style.display = 'none';
+
+    if (!email || !senha) {
+      erro.textContent = 'Preencha e-mail e senha.';
+      erro.style.display = 'block';
+      return;
+    }
+
+    try {
+      const res  = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: senha }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        erro.textContent = data.erro || 'Erro ao autenticar.';
+        erro.style.display = 'block';
+        return;
+      }
+
+      jwtToken = data.access_token;
+      refreshToken = data.refresh_token;
+      document.getElementById('token-display').textContent = jwtToken;
+      result.style.display = 'block';
+      navigator.clipboard.writeText(jwtToken).catch(() => {});
+
+    } catch(e) {
+      erro.textContent = 'Erro de conexão.';
+      erro.style.display = 'block';
+    }
+  }
+
+  function copiarToken() {
+    navigator.clipboard.writeText(jwtToken);
+  }
+
+  function toggleEndpoint(id) {
+    const el  = document.getElementById('ep-' + id);
+    const ch  = document.getElementById('chevron-' + id);
+    const open = el.style.display === 'block';
+    el.style.display = open ? 'none' : 'block';
+    ch.style.transform = open ? '' : 'rotate(180deg)';
+  }
+
+  async function testarEndpoint(metodo, path, epId) {
+    if (!jwtToken) {
+      alert('Gere um token JWT primeiro (seção acima).');
+      return;
+    }
+
+    const respEl   = document.getElementById('resp-' + epId);
+    const jsonEl   = document.getElementById('json-' + epId);
+    const statusEl = document.getElementById('status-' + epId);
+
+    jsonEl.textContent = 'Carregando...';
+    respEl.style.display = 'block';
+    statusEl.textContent = '';
+
+    const opts = {
+    method: metodo,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    };
+
+    if (path === '/api/auth/refresh') {
+    opts.headers.Authorization = `Bearer ${refreshToken}`;
+    } else {
+    opts.headers.Authorization = `Bearer ${jwtToken}`;
+    }
+
+    if (metodo === 'POST') {
+      const bodyEl = document.getElementById('body-' + epId);
+      if (bodyEl) opts.body = bodyEl.value;
+    }
+
+    try {
+      const res  = await fetch(path, opts);
+      const data = await res.json();
+
+      statusEl.textContent  = res.status + ' ' + res.statusText;
+      statusEl.style.color  = res.ok ? '#10b981' : '#ef4444';
+      jsonEl.textContent    = JSON.stringify(data, null, 2);
+      jsonEl.style.color    = res.ok ? '#10b981' : '#fca5a5';
+
+    } catch(e) {
+      jsonEl.textContent   = 'Erro: ' + e.message;
+      jsonEl.style.color   = '#ef4444';
+      statusEl.textContent = 'Erro de rede';
+      statusEl.style.color = '#ef4444';
+    }
+  }
+</script>
+{% endblock %}

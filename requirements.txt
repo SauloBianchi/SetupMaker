@@ -1,0 +1,26 @@
+# py -m venv .venv
+
+# .venv\Scripts\activate
+# ===> se der problema no de cima usa o de baixo:
+# cd .\.venv\Scripts
+# .\activate.bat
+# cd ..\..
+
+# .venv\Scripts\python.exe -m pip install --upgrade pip
+# .venv\Scripts\python.exe -m pip install -r requirements.txt
+# flask run
+
+# py -m flask .......
+
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Login
+Flask-JWT-Extended
+Flask-WTF
+Flask-Mail
+Flask-Dance
+python-dotenv
+bcrypt
+Werkzeug
+requests

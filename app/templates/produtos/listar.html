@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% block title %}Peças — SetupMaker{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <div>
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">
+      <i class="bi bi-grid-fill" style="color:#3b82f6;"></i> Peças
+    </h2>
+    <p style="font-size:13px;color:#64748b;">{{ produtos|length }} componente(s) encontrado(s)</p>
+  </div>
+  <a href="{{ url_for('builds.nova') }}" class="sm-btn sm-btn-primary">
+    <i class="bi bi-cpu-fill"></i> Montar PC
+  </a>
+</div>
+
+<!-- Filtros -->
+<form method="GET" action="{{ url_for('produtos.listar') }}"
+      style="background:#131d35;border:1px solid #1e2d4a;border-radius:12px;padding:16px;
+             display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;">
+
+  <div style="flex:2;min-width:180px;">
+    <label class="sm-label">Buscar</label>
+    <div style="position:relative;">
+      <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#64748b;"></i>
+      <input type="text" name="q" value="{{ filtros.q }}" placeholder="Nome ou marca..."
+             class="sm-input" style="padding-left:36px;">
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:140px;">
+    <label class="sm-label">Categoria</label>
+    <select name="categoria" class="sm-input">
+      <option value="">Todas</option>
+      {% for c in categorias %}
+      <option value="{{ c.slug }}" {% if filtros.categoria == c.slug %}selected{% endif %}>{{ c.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div style="flex:1;min-width:120px;">
+    <label class="sm-label">Marca</label>
+    <select name="marca" class="sm-input">
+      <option value="">Todas</option>
+      {% for m in marcas %}
+      <option value="{{ m }}" {% if filtros.marca == m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div style="flex:1;min-width:140px;">
+    <label class="sm-label">Ordenar</label>
+    <select name="ordem" class="sm-input">
+      <option value="nome"       {% if filtros.ordem == 'nome' %}selected{% endif %}>Nome A-Z</option>
+      <option value="preco_asc"  {% if filtros.ordem == 'preco_asc' %}selected{% endif %}>Menor preço</option>
+      <option value="preco_desc" {% if filtros.ordem == 'preco_desc' %}selected{% endif %}>Maior preço</option>
+      <option value="desempenho" {% if filtros.ordem == 'desempenho' %}selected{% endif %}>Desempenho</option>
+    </select>
+  </div>
+
+  <div>
+    <button type="submit" class="sm-btn sm-btn-primary">
+      <i class="bi bi-funnel-fill"></i> Filtrar
+    </button>
+  </div>
+  {% if filtros.q or filtros.categoria or filtros.marca %}
+  <div>
+    <a href="{{ url_for('produtos.listar') }}" class="sm-btn sm-btn-outline"><i class="bi bi-x-lg"></i> Limpar</a>
+  </div>
+  {% endif %}
+</form>
+
+<!-- Grid de produtos -->
+{% if not produtos %}
+<div style="text-align:center;padding:60px;color:#64748b;">
+  <div style="font-size:48px;margin-bottom:12px;"><i class="bi bi-search"></i></div>
+  <p style="font-size:16px;">Nenhuma peça encontrada.</p>
+  <a href="{{ url_for('produtos.listar') }}" style="color:#3b82f6;">Limpar filtros</a>
+</div>
+{% else %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+  {% for p in produtos %}
+  <a href="{{ url_for('produtos.detalhe', produto_id=p.id) }}"
+     style="background:#131d35;border:1px solid #1e2d4a;border-radius:12px;overflow:hidden;
+            text-decoration:none;display:flex;flex-direction:column;transition:all 0.15s;"
+     onmouseover="this.style.borderColor='#3b82f6';this.style.transform='translateY(-2px)'"
+     onmouseout="this.style.borderColor='#1e2d4a';this.style.transform='none'">
+
+    <!-- ── IMAGEM ── -->
+    <div style="height:160px;background:linear-gradient(135deg,#0f172a,#1e293b);
+                display:flex;align-items:center;justify-content:center;
+                border-bottom:1px solid #1e2d4a;overflow:hidden;position:relative;">
+
+      {% if p.imagem_url %}
+      <img src="{{ p.imagem_url }}"
+           alt="{{ p.nome }}"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+           style="max-width:100%;max-height:150px;object-fit:contain;padding:12px;
+                  transition:transform 0.2s;"
+           onmouseover="this.style.transform='scale(1.05)'"
+           onmouseout="this.style.transform='scale(1)'">
+      {% endif %}
+
+      <!-- Fallback por categoria -->
+      <div style="display:{% if not p.imagem_url %}flex{% else %}none{% endif %};
+                  flex-direction:column;align-items:center;justify-content:center;
+                  width:100%;height:100%;color:#334155;">
+        {% set cat_slug = p.categoria.slug if p.categoria else '' %}
+        {% if cat_slug == 'cpu' %}
+          <i class="bi bi-cpu-fill" style="font-size:48px;color:#3b82f6;opacity:0.4;"></i>
+        {% elif cat_slug == 'gpu' %}
+          <i class="bi bi-gpu-card" style="font-size:48px;color:#8b5cf6;opacity:0.4;"></i>
+        {% elif cat_slug == 'ram' %}
+          <i class="bi bi-memory" style="font-size:48px;color:#10b981;opacity:0.4;"></i>
+        {% elif cat_slug == 'motherboard' %}
+          <i class="bi bi-motherboard-fill" style="font-size:48px;color:#f59e0b;opacity:0.4;"></i>
+        {% elif cat_slug == 'storage' %}
+          <i class="bi bi-device-hdd-fill" style="font-size:48px;color:#06b6d4;opacity:0.4;"></i>
+        {% elif cat_slug == 'psu' %}
+          <i class="bi bi-lightning-charge-fill" style="font-size:48px;color:#eab308;opacity:0.4;"></i>
+        {% elif cat_slug == 'case' %}
+          <i class="bi bi-pc-display" style="font-size:48px;color:#64748b;opacity:0.4;"></i>
+        {% elif cat_slug == 'cooler' %}
+          <i class="bi bi-fan" style="font-size:48px;color:#38bdf8;opacity:0.4;"></i>
+        {% else %}
+          <i class="bi bi-box-seam" style="font-size:48px;color:#64748b;opacity:0.4;"></i>
+        {% endif %}
+        <span style="font-size:11px;color:#475569;margin-top:6px;">Sem imagem</span>
+      </div>
+
+      <!-- Badge de categoria -->
+      <div style="position:absolute;top:8px;left:8px;
+                  font-size:9px;font-weight:700;color:#3b82f6;text-transform:uppercase;
+                  letter-spacing:0.8px;background:rgba(15,23,42,0.85);
+                  padding:2px 7px;border-radius:4px;border:1px solid rgba(59,130,246,0.3);">
+        {{ p.categoria.nome if p.categoria else '—' }}
+      </div>
+    </div>
+
+    <!-- ── INFO ── -->
+    <div style="padding:14px;flex:1;display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:13px;font-weight:600;color:#e2e8f0;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.nome }}</div>
+      <div style="font-size:11px;color:#64748b;">{{ p.marca }}</div>
+
+      {% if p.desempenho %}
+      <div style="margin-top:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:3px;">
+          <span>Desempenho</span><span>{{ p.desempenho }}/100</span>
+        </div>
+        <div style="height:3px;background:#1e2d4a;border-radius:2px;">
+          <div style="height:3px;border-radius:2px;width:{{ p.desempenho }}%;
+                      background:{% if p.desempenho >= 80 %}#10b981{% elif p.desempenho >= 50 %}#3b82f6{% else %}#f59e0b{% endif %};"></div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ── INTERVALO DE PREÇOS ── -->
+      <div style="margin-top:auto;padding-top:8px;">
+        {% set intervalo = p.intervalo_precos() %}
+        {% if intervalo %}
+        <div style="font-size:10px;color:#64748b;margin-bottom:5px;">Estimativa de preço</div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:13px;font-weight:700;color:#10b981;">
+            R$ {{ "%.0f"|format(intervalo[0]) }}
+          </span>
+          <span style="font-size:10px;color:#475569;">——</span>
+          <span style="font-size:13px;font-weight:700;color:#3b82f6;">
+            R$ {{ "%.0f"|format(intervalo[1]) }}
+          </span>
+        </div>
+
+        <!-- Barra slider -->
+        <div style="position:relative;height:4px;background:#1e2d4a;border-radius:2px;margin-bottom:4px;">
+          <div style="position:absolute;left:0;right:0;height:4px;
+                      background:linear-gradient(90deg,#10b981,#3b82f6);
+                      border-radius:2px;"></div>
+          <div style="position:absolute;left:0;top:-3px;width:10px;height:10px;
+                      background:#10b981;border-radius:50%;border:2px solid #0f172a;"></div>
+          <div style="position:absolute;right:0;top:-3px;width:10px;height:10px;
+                      background:#3b82f6;border-radius:50%;border:2px solid #0f172a;"></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;">
+          <span style="font-size:9px;color:#475569;">mínimo</span>
+          <span style="font-size:9px;color:#475569;">máximo</span>
+        </div>
+        {% else %}
+        <div style="font-size:13px;color:#475569;">Sem preço cadastrado</div>
+        {% endif %}
+
+        {% if p.consumo_watts and p.consumo_watts > 0 %}
+        <div style="font-size:10px;color:#f59e0b;background:rgba(245,158,11,0.1);
+                    padding:3px 7px;border-radius:4px;margin-top:6px;display:inline-block;">
+          <i class="bi bi-lightning-charge-fill" style="color:#f59e0b;font-size:10px;"></i> {{ p.consumo_watts }}W
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
