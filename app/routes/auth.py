@@ -35,15 +35,10 @@ def enviar_codigo(user, assunto, tipo):
             <div style="background:linear-gradient(135deg,#0d1b2e,#1a2f4e);
                         padding:28px 32px;border-bottom:1px solid #1e2d4a;
                         display:flex;align-items:center;gap:14px;">
-            <img src="https://raw.githubusercontent.com/seu-usuario/setupmaker/main/app/static/img/logo.png"
+            <img src="https://raw.githubusercontent.com/SauloBianchi/SetupMaker/main/app/static/img/logo.png"
                 alt="SetupMaker"
-                style="height:40px;width:auto;object-fit:contain;"
+                style="height:40px;width:auto;object-fit:contain;display:block;margin:0 auto;"
                 onerror="this.style.display='none'">
-            <div>
-                <div style="font-family:Georgia,serif;font-size:20px;font-weight:700;
-                            color:#e2e8f0;letter-spacing:0.5px;">SetupMaker</div>
-                <div style="font-size:11px;color:#64748b;">Monte, compare e economize.</div>
-            </div>
             </div>
 
             <!-- Corpo -->
