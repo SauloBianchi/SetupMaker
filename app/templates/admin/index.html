@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% block title %}Painel Admin — SetupMaker{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+  <div>
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">
+      <i class="bi bi-shield-fill" style="color:#3b82f6;"></i> Painel Administrativo
+    </h2>
+    <p style="font-size:13px;color:#64748b;">Visão geral do sistema</p>
+  </div>
+</div>
+
+<!-- Cards de estatísticas -->
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;">
+  {% for icon, valor, label, cor, href in [
+    ('bi-people-fill',   total_users,    'Usuários',   '#3b82f6', url_for('admin.usuarios')),
+    ('bi-grid-fill',     total_produtos, 'Produtos',   '#10b981', url_for('admin.produtos')),
+    ('bi-cpu-fill',      total_builds,   'Builds',     '#8b5cf6', url_for('admin.builds')),
+    ('bi-shop',          6,    'Lojas',      '#f59e0b', '#'),
+    ('bi-tags-fill',     total_precos,   'Preços',     '#ef4444', '#'),
+  ] %}
+  <a href="{{ href }}" style="background:#131d35;border:1px solid #1e2d4a;border-radius:12px;
+     padding:18px;text-decoration:none;display:block;transition:border-color 0.15s;"
+     onmouseover="this.style.borderColor='{{ cor }}'"
+     onmouseout="this.style.borderColor='#1e2d4a'">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:36px;height:36px;border-radius:8px;background:{{ cor }}22;
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="bi {{ icon }}" style="color:{{ cor }};font-size:16px;"></i>
+      </div>
+    </div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:{{ cor }};">
+      {{ valor }}
+    </div>
+    <div style="font-size:12px;color:#64748b;">{{ label }}</div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Ações rápidas -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+  <div class="sm-card">
+    <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+               color:#e2e8f0;margin-bottom:14px;">⚡ Ações Rápidas</h4>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      {% for href, icon, label, cor in [
+        (url_for('admin.produto_novo'),  'bi-plus-circle-fill', 'Nova Peça',   '#10b981'),
+        (url_for('admin.build_nova'),    'bi-cpu-fill',         'Nova Build',  '#8b5cf6'),
+        (url_for('admin.usuarios'),      'bi-people-fill',      'Usuários',    '#3b82f6'),
+        (url_for('admin.produtos'),      'bi-grid-fill',        'Ver Produtos','#f59e0b'),
+      ] %}
+      <a href="{{ href }}" style="background:#0f172a;border:1px solid #1e2d4a;border-radius:8px;
+         padding:12px;text-decoration:none;display:flex;align-items:center;gap:8px;
+         transition:border-color 0.15s;"
+         onmouseover="this.style.borderColor='{{ cor }}'"
+         onmouseout="this.style.borderColor='#1e2d4a'">
+        <i class="bi {{ icon }}" style="color:{{ cor }};font-size:16px;"></i>
+        <span style="font-size:13px;font-weight:500;color:#e2e8f0;">{{ label }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Usuários recentes -->
+  <div class="sm-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#e2e8f0;">
+        👥 Usuários Recentes
+      </h4>
+      <a href="{{ url_for('admin.usuarios') }}" style="font-size:12px;color:#3b82f6;text-decoration:none;">
+        Ver todos →
+      </a>
+    </div>
+    {% for u in usuarios_recentes %}
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1e2d4a;">
+      <div style="width:28px;height:28px;border-radius:50%;
+                  background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">
+        {{ u.username[0].upper() }}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:#e2e8f0;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          {{ u.username }}
+          {% if u.is_admin %}
+          <span style="font-size:9px;background:#3b82f6;color:#fff;
+                       padding:1px 5px;border-radius:3px;margin-left:4px;">ADMIN</span>
+          {% endif %}
+        </div>
+        <div style="font-size:11px;color:#64748b;">{{ u.email }}</div>
+      </div>
+      <div style="font-size:11px;color:{% if u.email_verificado %}#10b981{% else %}#ef4444{% endif %};">
+        {% if u.email_verificado %}✓ Verificado{% else %}✗ Pendente{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Builds recentes -->
+<div class="sm-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#e2e8f0;">
+      🖥️ Builds Recentes
+    </h4>
+    <a href="{{ url_for('admin.builds') }}" style="font-size:12px;color:#3b82f6;text-decoration:none;">
+      Ver todas →
+    </a>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:1px solid #1e2d4a;">
+          {% for col in ['Build', 'Usuário', 'CPU', 'GPU', 'Total', 'Status', 'Ações'] %}
+          <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;
+                     color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">
+            {{ col }}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in builds_recentes %}
+        <tr style="border-bottom:1px solid #1e2d4a;" onmouseover="this.style.background='#1a2540'"
+            onmouseout="this.style.background='transparent'">
+          <td style="padding:10px 12px;color:#e2e8f0;font-weight:500;">{{ b.nome }}</td>
+          <td style="padding:10px 12px;color:#94a3b8;">{{ b.usuario.username }}</td>
+          <td style="padding:10px 12px;color:#94a3b8;">{{ b.cpu.nome[:25] if b.cpu else '—' }}</td>
+          <td style="padding:10px 12px;color:#94a3b8;">{{ b.gpu.nome[:25] if b.gpu else '—' }}</td>
+          <td style="padding:10px 12px;color:#10b981;font-weight:600;">
+            R$ {{ "%.2f"|format(b.preco_total()) }}
+          </td>
+          <td style="padding:10px 12px;">
+            <span style="font-size:11px;padding:2px 8px;border-radius:4px;
+                {% if b.publica %}background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);
+                {% else %}background:rgba(100,116,139,0.1);color:#64748b;border:1px solid rgba(100,116,139,0.2);{% endif %}">
+              {{ 'Pública' if b.publica else 'Privada' }}
+            </span>
+          </td>
+          <td style="padding:10px 12px;">
+            <a href="{{ url_for('admin.build_editar', build_id=b.id) }}"
+               style="color:#3b82f6;text-decoration:none;font-size:12px;">Editar</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

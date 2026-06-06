@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Builds Públicas — SetupMaker{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;margin-bottom:4px;">
+      <i class="bi bi-globe2" style="color:#3b82f6;"></i> Builds Públicas
+    </h2>
+    <p style="font-size:13px;color:#64748b;">{{ total }} configuração(ões) compartilhada(s) pela comunidade</p>
+  </div>
+
+  <!-- Filtros / ordenação -->
+  <form method="GET" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <select name="ordenar" class="sm-input" style="width:auto;font-size:12px;padding:6px 10px;"
+            onchange="this.form.submit()">
+      <option value="recentes"   {% if ordenar=='recentes'   %}selected{% endif %}>Mais recentes</option>
+      <option value="avaliacao"  {% if ordenar=='avaliacao'  %}selected{% endif %}>Melhor avaliação</option>
+      <option value="preco_asc"  {% if ordenar=='preco_asc'  %}selected{% endif %}>Menor preço</option>
+      <option value="preco_desc" {% if ordenar=='preco_desc' %}selected{% endif %}>Maior preço</option>
+    </select>
+  </form>
+</div>
+
+{% if not builds %}
+<div style="text-align:center;padding:80px 24px;background:#131d35;border:1px solid #1e2d4a;border-radius:16px;">
+  <div style="font-size:56px;margin-bottom:16px;"><i class="bi bi-globe2" style="color:#3b82f6;"></i></div>
+  <h3 style="font-family:'Rajdhani',sans-serif;font-size:20px;color:#e2e8f0;margin-bottom:8px;">
+    Nenhuma build pública ainda
+  </h3>
+  <p style="color:#64748b;font-size:14px;margin-bottom:20px;">
+    Seja o primeiro a compartilhar sua configuração com a comunidade!
+  </p>
+  <a href="{{ url_for('builds.nova') }}" class="sm-btn sm-btn-primary">
+    <i class="bi bi-cpu-fill"></i> Criar minha build
+  </a>
+</div>
+
+{% else %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;">
+  {% for b, media_nota, total_avals in builds %}
+  <div style="background:#131d35;border:1px solid #1e2d4a;border-radius:14px;
+              overflow:hidden;transition:border-color 0.15s,transform 0.15s;"
+       onmouseover="this.style.borderColor='#3b82f6';this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.borderColor='#1e2d4a';this.style.transform='translateY(0)'">
+
+    <!-- Header colorido -->
+    <div style="background:linear-gradient(135deg,#1e3a5f,#0f172a);height:80px;
+                display:flex;align-items:center;justify-content:space-between;
+                padding:0 18px;border-bottom:1px solid #1e2d4a;">
+      <i class="bi bi-pc-display-horizontal" style="font-size:34px;color:#3b82f6;"></i>
+      {% if media_nota %}
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#f59e0b;">
+          ★ {{ "%.1f"|format(media_nota) }}
+        </div>
+        <div style="font-size:10px;color:#64748b;">{{ total_avals }} avaliação(ões)</div>
+      </div>
+      {% else %}
+      <div style="font-size:10px;color:#475569;font-style:italic;">Sem avaliações</div>
+      {% endif %}
+    </div>
+
+    <div style="padding:16px;">
+      <!-- Título e autor -->
+      <div style="margin-bottom:10px;">
+        <h3 style="font-size:15px;font-weight:700;color:#e2e8f0;margin-bottom:2px;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ b.nome }}</h3>
+        <div style="font-size:11px;color:#64748b;">
+          por <span style="color:#94a3b8;font-weight:600;">{{ b.usuario.username }}</span>
+          · {{ b.criado_em.strftime('%d/%m/%Y') }}
+        </div>
+      </div>
+
+      <!-- Peças resumidas -->
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">
+        {% for peca, label in [(b.cpu,'CPU'),(b.gpu,'GPU'),(b.ram,'RAM'),(b.motherboard,'MB'),(b.storage,'SSD')] %}
+        <span style="font-size:10px;
+                     background:{% if peca %}rgba(59,130,246,0.1){% else %}rgba(100,116,139,0.06){% endif %};
+                     color:{% if peca %}#3b82f6{% else %}#475569{% endif %};
+                     padding:2px 7px;border-radius:4px;
+                     border:1px solid {% if peca %}rgba(59,130,246,0.2){% else %}rgba(100,116,139,0.1){% endif %};">
+          {{ label }}{% if not peca %} —{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+
+      <!-- Preço e consumo -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;color:#64748b;">Total estimado</div>
+          <div style="font-size:18px;font-weight:700;color:#10b981;">
+            R$ {{ "%.2f"|format(b.preco_total()) }}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:#64748b;">Consumo</div>
+          <div style="font-size:13px;font-weight:600;color:#f59e0b;">
+            <i class="bi bi-lightning-charge-fill" style="font-size:10px;"></i> {{ b.consumo_total() }}W
+          </div>
+        </div>
+      </div>
+
+      <!-- CPU + GPU destaque -->
+      {% if b.cpu or b.gpu %}
+      <div style="background:#0f172a;border:1px solid #1e2d4a;border-radius:8px;
+                  padding:10px;margin-bottom:12px;font-size:11px;">
+        {% if b.cpu %}
+        <div style="color:#94a3b8;margin-bottom:3px;">
+          <i class="bi bi-cpu-fill" style="color:#3b82f6;"></i>
+          {{ b.cpu.nome[:45] }}{% if b.cpu.nome|length > 45 %}…{% endif %}
+        </div>
+        {% endif %}
+        {% if b.gpu %}
+        <div style="color:#94a3b8;">
+          <i class="bi bi-gpu-card" style="color:#8b5cf6;"></i>
+          {{ b.gpu.nome[:45] }}{% if b.gpu.nome|length > 45 %}…{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <a href="{{ url_for('builds.detalhe', build_id=b.id) }}"
+         class="sm-btn sm-btn-primary"
+         style="width:100%;justify-content:center;padding:9px;">
+        <i class="bi bi-eye-fill"></i> Ver build completa
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Paginação -->
+{% if pagina > 1 or has_next %}
+<div style="display:flex;justify-content:center;gap:10px;margin-top:28px;align-items:center;">
+  {% if pagina > 1 %}
+  <a href="{{ url_for('builds.publicas', ordenar=ordenar, pagina=pagina-1) }}"
+     class="sm-btn sm-btn-outline" style="padding:8px 18px;">← Anterior</a>
+  {% endif %}
+  <span style="font-size:13px;color:#64748b;">Página {{ pagina }}</span>
+  {% if has_next %}
+  <a href="{{ url_for('builds.publicas', ordenar=ordenar, pagina=pagina+1) }}"
+     class="sm-btn sm-btn-outline" style="padding:8px 18px;">Próxima →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

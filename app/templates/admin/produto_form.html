@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if produto else 'Nova' }} Peça — Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+  <div style="font-size:12px;color:#64748b;margin-bottom:4px;">
+    <a href="{{ url_for('admin.index') }}" style="color:#64748b;text-decoration:none;">Admin</a>
+    <span style="margin:0 6px;">›</span>
+    <a href="{{ url_for('admin.produtos') }}" style="color:#64748b;text-decoration:none;">Produtos</a>
+    <span style="margin:0 6px;">›</span>
+    {{ 'Editar' if produto else 'Nova Peça' }}
+  </div>
+  <h2 style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;">
+    <i class="bi bi-grid-fill" style="color:#10b981;"></i>
+    {{ 'Editar: ' + produto.nome if produto else 'Nova Peça' }}
+  </h2>
+</div>
+
+<form method="POST" style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <!-- Coluna principal -->
+  <div>
+    <!-- Informações básicas -->
+    <div class="sm-card" style="margin-bottom:16px;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+                 color:#e2e8f0;margin-bottom:16px;">📦 Informações Básicas</h4>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label class="sm-label">Nome do produto *</label>
+          <input type="text" name="nome" class="sm-input" required
+                 value="{{ produto.nome if produto else '' }}"
+                 placeholder="Ex: AMD Ryzen 5 5600">
+        </div>
+        <div>
+          <label class="sm-label">Marca</label>
+          <input type="text" name="marca" class="sm-input"
+                 value="{{ produto.marca if produto else '' }}"
+                 placeholder="Ex: AMD, Intel, NVIDIA">
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="sm-label">Categoria *</label>
+        <select name="categoria_id" class="sm-input" required>
+          <option value="">Selecione...</option>
+          {% for c in categorias %}
+          <option value="{{ c.id }}"
+            {% if produto and produto.categoria_id == c.id %}selected{% endif %}>
+            {{ c.nome }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="sm-label">URL da Imagem</label>
+        <input type="url" name="imagem_url" class="sm-input"
+               value="{{ produto.imagem_url if produto else '' }}"
+               placeholder="https://..." id="imgUrl"
+               oninput="document.getElementById('imgPreview').src=this.value">
+        <div style="margin-top:8px;">
+          <img id="imgPreview"
+               src="{{ produto.imagem_url if produto and produto.imagem_url else '' }}"
+               style="max-height:80px;max-width:120px;object-fit:contain;border-radius:6px;
+                      background:#0f172a;display:{% if produto and produto.imagem_url %}block{% else %}none{% endif %};"
+               onerror="this.style.display='none'"
+               onload="this.style.display='block'">
+        </div>
+      </div>
+
+      <div>
+        <label class="sm-label">Descrição</label>
+        <textarea name="descricao" class="sm-input" rows="3"
+                  style="resize:vertical;"
+                  placeholder="Especificações técnicas, detalhes...">{{ produto.descricao if produto else '' }}</textarea>
+      </div>
+    </div>
+
+    <!-- Specs técnicas -->
+    <div class="sm-card" style="margin-bottom:16px;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+                 color:#e2e8f0;margin-bottom:16px;">⚙️ Especificações Técnicas</h4>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+        <div>
+          <label class="sm-label">Socket</label>
+          <input type="text" name="socket" class="sm-input"
+                 value="{{ produto.socket if produto else '' }}"
+                 placeholder="AM4, AM5, LGA1700...">
+          <div style="font-size:11px;color:#475569;margin-top:3px;">CPU e Placa-Mãe</div>
+        </div>
+        <div>
+          <label class="sm-label">Tipo de RAM</label>
+          <select name="tipo_ram" class="sm-input">
+            <option value="">—</option>
+            {% for t in ['DDR4', 'DDR5', 'DDR3'] %}
+            <option value="{{ t }}"
+              {% if produto and produto.tipo_ram == t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:11px;color:#475569;margin-top:3px;">RAM e Placa-Mãe</div>
+        </div>
+        <div>
+          <label class="sm-label">Consumo (Watts)</label>
+          <input type="number" name="consumo_watts" class="sm-input" min="0"
+                 value="{{ produto.consumo_watts if produto else '' }}"
+                 placeholder="65">
+        </div>
+        <div>
+          <label class="sm-label">Score de Desempenho</label>
+          <input type="number" name="desempenho" class="sm-input" min="0" max="100"
+                 value="{{ produto.desempenho if produto else '' }}"
+                 placeholder="0-100">
+          <div style="font-size:11px;color:#475569;margin-top:3px;">Usado na estimativa de FPS</div>
+        </div>
+        <div>
+          <label class="sm-label">Frequência</label>
+          <input type="text" name="frequencia" class="sm-input"
+                 value="{{ produto.frequencia if produto else '' }}"
+                 placeholder="3200MHz, 4.4GHz...">
+        </div>
+        <div>
+          <label class="sm-label">Capacidade</label>
+          <input type="text" name="capacidade" class="sm-input"
+                 value="{{ produto.capacidade if produto else '' }}"
+                 placeholder="16GB, 1TB...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coluna lateral: preços -->
+  <div style="position:sticky;top:84px;">
+    <div class="sm-card" style="margin-bottom:16px;">
+      <h4 style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+                 color:#e2e8f0;margin-bottom:16px;">🏷️ Preços por Loja</h4>
+      <p style="font-size:12px;color:#64748b;margin-bottom:14px;">
+        Deixe em branco para não cadastrar preço naquela loja.
+      </p>
+
+      {% for loja in lojas %}
+      <div style="margin-bottom:12px;">
+        <label class="sm-label">{{ loja.nome }}</label>
+        <div style="position:relative;">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                       color:#64748b;font-size:13px;">R$</span>
+          <input type="text" name="preco_{{ loja.id }}" class="sm-input"
+                 style="padding-left:36px;"
+                 placeholder="0,00"
+                 value="{% if precos_dict is defined and loja.id in precos_dict %}{{ '%.2f'|format(precos_dict[loja.id]) }}{% endif %}">
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="submit" class="sm-btn sm-btn-primary" style="width:100%;justify-content:center;padding:13px;">
+      <i class="bi bi-floppy-fill"></i>
+      {{ 'Salvar alterações' if produto else 'Criar produto' }}
+    </button>
+
+    <a href="{{ url_for('admin.produtos') }}"
+       class="sm-btn sm-btn-outline" style="width:100%;justify-content:center;
+              padding:13px;margin-top:8px;display:flex;">
+      Cancelar
+    </a>
+  </div>
+</form>
+{% endblock %}

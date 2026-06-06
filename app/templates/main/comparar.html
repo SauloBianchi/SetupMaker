@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Comparar Preços{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:24px 16px;">
+
+  <!-- Cabeçalho -->
+  <div style="margin-bottom:24px;">
+    <h1 style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;
+               color:#e2e8f0;margin-bottom:4px;">
+      <i class="bi bi-tags-fill" style="color:#3b82f6;"></i> Comparar Preços
+    </h1>
+    <p style="color:#64748b;font-size:13px;">
+      Veja lado a lado o preço de cada peça nas lojas com preços cadastrados.
+    </p>
+  </div>
+
+  <!-- Filtros -->
+  <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
+    <input type="text" name="q" value="{{ filtros.q }}"
+           placeholder="Buscar peça..."
+           style="flex:1;min-width:200px;padding:8px 14px;border-radius:8px;
+                  border:1px solid #1e2d4a;background:#0f172a;color:#e2e8f0;font-size:13px;">
+
+    <select name="categoria"
+            style="padding:8px 14px;border-radius:8px;border:1px solid #1e2d4a;
+                   background:#0f172a;color:#e2e8f0;font-size:13px;">
+      <option value="">Todas as categorias</option>
+      {% for cat in categorias %}
+      <option value="{{ cat.slug }}" {% if filtros.categoria == cat.slug %}selected{% endif %}>
+        {{ cat.nome }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <button type="submit"
+            style="padding:8px 20px;border-radius:8px;border:none;
+                   background:#3b82f6;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+      <i class="bi bi-search"></i> Filtrar
+    </button>
+
+    {% if filtros.q or filtros.categoria %}
+    <a href="{{ url_for('main.comparar') }}"
+       style="padding:8px 16px;border-radius:8px;border:1px solid #1e2d4a;
+              background:transparent;color:#64748b;font-size:13px;text-decoration:none;
+              display:flex;align-items:center;gap:5px;">
+      <i class="bi bi-x-lg"></i> Limpar
+    </a>
+    {% endif %}
+  </form>
+
+  {% if not tabela %}
+  <!-- Estado vazio -->
+  <div style="text-align:center;padding:60px 20px;background:#131d35;
+              border:1px solid #1e2d4a;border-radius:12px;">
+    <i class="bi bi-tags" style="font-size:48px;color:#1e2d4a;display:block;margin-bottom:16px;"></i>
+    <div style="font-size:16px;font-weight:600;color:#475569;margin-bottom:8px;">
+      Nenhuma peça com preços cadastrados
+    </div>
+    <p style="color:#334155;font-size:13px;max-width:360px;margin:0 auto 20px;">
+      Para comparar preços, acesse a página de uma peça e informe o valor que encontrou em cada loja.
+    </p>
+    <a href="{{ url_for('produtos.listar') }}"
+       style="display:inline-block;padding:9px 20px;border-radius:8px;
+              background:#3b82f6;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">
+      <i class="bi bi-cpu"></i> Ver peças
+    </a>
+  </div>
+
+  {% else %}
+
+  <!-- Legenda das lojas -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    {% for nome_loja in todas_lojas %}
+    {% set cfg = lojas_config[nome_loja] %}
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;
+                border-radius:20px;border:1px solid {{ cfg.cor_borda }};
+                background:{{ cfg.cor_bg }};font-size:12px;color:#e2e8f0;">
+      <img src="{{ cfg.favicon }}" width="14" height="14"
+           style="border-radius:2px;vertical-align:middle;"
+           onerror="this.style.display='none'">
+      {{ nome_loja }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Contador -->
+  <div style="font-size:12px;color:#475569;margin-bottom:16px;">
+    {{ tabela|length }} peça{% if tabela|length != 1 %}s{% endif %} com preços cadastrados
+  </div>
+
+  <!-- Tabela de comparação -->
+  <div style="background:#131d35;border:1px solid #1e2d4a;border-radius:12px;overflow:hidden;">
+
+    <!-- Cabeçalho da tabela -->
+    <div style="display:grid;grid-template-columns:2fr {% for l in todas_lojas %}1fr {% endfor %};
+                padding:12px 16px;border-bottom:2px solid #1e2d4a;gap:8px;
+                background:rgba(15,23,42,0.6);">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">
+        Peça
+      </div>
+      {% for nome_loja in todas_lojas %}
+      {% set cfg = lojas_config[nome_loja] %}
+      <div style="display:flex;align-items:center;justify-content:center;gap:5px;
+                  font-size:11px;font-weight:600;color:#94a3b8;text-align:center;">
+        <img src="{{ cfg.favicon }}" width="14" height="14"
+             style="border-radius:2px;" onerror="this.style.display='none'">
+        <span style="display:none;" class="loja-nome-header">{{ nome_loja }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Linhas -->
+    {% for linha in tabela %}
+    {% set p = linha.produto %}
+    <div style="display:grid;grid-template-columns:2fr {% for l in todas_lojas %}1fr {% endfor %};
+                padding:10px 16px;gap:8px;border-bottom:1px solid #0f172a;
+                transition:background 0.15s;align-items:center;"
+         onmouseover="this.style.background='rgba(59,130,246,0.04)'"
+         onmouseout="this.style.background='transparent'">
+
+      <!-- Nome da peça -->
+      <div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:2px;">{{ p.categoria.nome if p.categoria else '' }}</div>
+        <a href="{{ url_for('produtos.detalhe', produto_id=p.id) }}"
+           style="font-size:13px;font-weight:600;color:#e2e8f0;text-decoration:none;
+                  display:block;line-height:1.3;"
+           onmouseover="this.style.color='#3b82f6'"
+           onmouseout="this.style.color='#e2e8f0'">
+          {{ p.nome }}
+        </a>
+        <div style="font-size:11px;color:#475569;">{{ p.marca }}</div>
+      </div>
+
+      <!-- Preço por loja -->
+      {% for nome_loja in todas_lojas %}
+      {% set pr = linha.precos.get(nome_loja) %}
+      {% set cfg = lojas_config[nome_loja] %}
+      {% set url = linha.urls.get(nome_loja, '#') %}
+      <div style="text-align:center;">
+        {% if pr %}
+          <a href="{{ url }}" target="_blank" rel="noopener"
+             style="display:inline-flex;flex-direction:column;align-items:center;
+                    text-decoration:none;padding:6px 8px;border-radius:6px;
+                    border:1px solid {{ 'rgba(16,185,129,0.3)' if pr == linha.menor else cfg.cor_borda }};
+                    background:{{ 'rgba(16,185,129,0.06)' if pr == linha.menor else cfg.cor_bg }};
+                    transition:all 0.15s;min-width:70px;"
+             onmouseover="this.style.opacity='0.8'"
+             onmouseout="this.style.opacity='1'">
+            {% if pr == linha.menor %}
+            <span style="font-size:9px;color:#10b981;font-weight:700;margin-bottom:2px;">
+              MENOR
+            </span>
+            {% endif %}
+            <span style="font-size:13px;font-weight:700;
+                         color:{{ '#10b981' if pr == linha.menor else '#e2e8f0' }};">
+              R$&nbsp;{{ "%.2f"|format(pr.preco) }}
+            </span>
+            <span style="font-size:9px;color:#64748b;margin-top:1px;">
+              <i class="bi bi-box-arrow-up-right"></i> ver
+            </span>
+          </a>
+        {% else %}
+          <a href="{{ url }}" target="_blank" rel="noopener"
+             style="display:inline-flex;align-items:center;justify-content:center;
+                    text-decoration:none;padding:6px 8px;border-radius:6px;
+                    border:1px solid #1e2d4a;color:#334155;font-size:11px;
+                    min-width:70px;transition:all 0.15s;"
+             title="Buscar {{ p.nome }} na {{ nome_loja }}"
+             onmouseover="this.style.color='#64748b';this.style.borderColor='#2d3f5e'"
+             onmouseout="this.style.color='#334155';this.style.borderColor='#1e2d4a'">
+            <i class="bi bi-search" style="font-size:10px;margin-right:3px;"></i> buscar
+          </a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Nota de rodapé -->
+  <div style="margin-top:16px;padding:12px 16px;background:#0f172a;border-radius:8px;
+              border:1px solid #1e2d4a;font-size:12px;color:#475569;
+              display:flex;align-items:center;gap:8px;">
+    <i class="bi bi-info-circle" style="color:#3b82f6;flex-shrink:0;"></i>
+    Preços informados pela comunidade. Para adicionar ou atualizar um preço, acesse a página da peça.
+    Os preços exibidos com <span style="color:#10b981;font-weight:600;">MENOR</span> indicam o menor valor entre as lojas cadastradas.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

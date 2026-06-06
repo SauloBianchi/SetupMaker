@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}Usuários — Admin{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:4px;">
+      <a href="{{ url_for('admin.index') }}" style="color:#64748b;text-decoration:none;">Admin</a>
+      <span style="margin:0 6px;">›</span> Usuários
+    </div>
+    <h2 style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0;">
+      <i class="bi bi-people-fill" style="color:#3b82f6;"></i>
+      Usuários <span style="font-size:14px;color:#64748b;font-weight:400;">({{ users|length }})</span>
+    </h2>
+  </div>
+</div>
+
+<!-- Busca -->
+<form method="GET" style="margin-bottom:16px;">
+  <div style="position:relative;max-width:380px;">
+    <i class="bi bi-search" style="position:absolute;left:12px;top:50%;
+       transform:translateY(-50%);color:#64748b;"></i>
+    <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por nome ou e-mail..."
+           class="sm-input" style="padding-left:38px;">
+  </div>
+</form>
+
+<div class="sm-card">
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:2px solid #1e2d4a;">
+          {% for col in ['#', 'Usuário', 'E-mail', 'E-mail Verificado', 'Cadastro', 'Role', 'Ações'] %}
+          <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;
+                     color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr style="border-bottom:1px solid #1e2d4a;transition:background 0.1s;"
+            onmouseover="this.style.background='#1a2540'"
+            onmouseout="this.style.background='transparent'">
+
+          <td style="padding:12px 14px;color:#475569;font-size:12px;">{{ u.id }}</td>
+
+          <td style="padding:12px 14px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;
+                          background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:12px;font-weight:700;color:#fff;">
+                {{ u.username[0].upper() }}
+              </div>
+              <span style="font-weight:500;color:#e2e8f0;">{{ u.username }}</span>
+            </div>
+          </td>
+
+          <td style="padding:12px 14px;color:#94a3b8;">{{ u.email }}</td>
+
+          <td style="padding:12px 14px;">
+            <span style="font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600;
+              {% if u.email_verificado %}background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);
+              {% else %}background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);{% endif %}">
+              {{ '✓ Verificado' if u.email_verificado else '✗ Pendente' }}
+            </span>
+          </td>
+
+          <td style="padding:12px 14px;color:#64748b;font-size:12px;">
+            {{ u.criado_em.strftime('%d/%m/%Y') if u.criado_em else '—' }}
+          </td>
+
+          <td style="padding:12px 14px;">
+            {% if u.is_admin %}
+            <span style="font-size:11px;background:rgba(59,130,246,0.15);color:#3b82f6;
+                         border:1px solid rgba(59,130,246,0.3);padding:2px 8px;border-radius:4px;
+                         font-weight:600;">ADMIN</span>
+            {% else %}
+            <span style="font-size:11px;color:#64748b;">Usuário</span>
+            {% endif %}
+          </td>
+
+          <td style="padding:12px 14px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <!-- Toggle admin -->
+              {% if u.id != current_user.id %}
+              <form action="{{ url_for('admin.toggle_admin', user_id=u.id) }}" method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" title="{{ 'Remover admin' if u.is_admin else 'Promover a admin' }}"
+                        style="font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;border:none;
+                               background:{% if u.is_admin %}rgba(239,68,68,0.1){% else %}rgba(59,130,246,0.1){% endif %};
+                               color:{% if u.is_admin %}#ef4444{% else %}#3b82f6{% endif %};">
+                  {{ '↓ Remover admin' if u.is_admin else '↑ Tornar admin' }}
+                </button>
+              </form>
+
+              <!-- Toggle verificado -->
+              <form action="{{ url_for('admin.toggle_verificado', user_id=u.id) }}" method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" title="{{ 'Desverificar e-mail' if u.email_verificado else 'Verificar e-mail' }}"
+                        style="font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;border:none;
+                               background:rgba(245,158,11,0.1);color:#f59e0b;">
+                  {{ '✉ Desverificar' if u.email_verificado else '✉ Verificar' }}
+                </button>
+              </form>
+
+              <!-- Deletar -->
+              <form action="{{ url_for('admin.deletar_usuario', user_id=u.id) }}" method="POST"
+                    style="display:inline;"
+                    onsubmit="return confirm('Deletar {{ u.username }}? Esta ação não pode ser desfeita.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                        style="font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;border:none;
+                               background:rgba(239,68,68,0.1);color:#ef4444;">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
+              {% else %}
+              <span style="font-size:11px;color:#475569;font-style:italic;">Você</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="padding:40px;text-align:center;color:#64748b;">
+            Nenhum usuário encontrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
